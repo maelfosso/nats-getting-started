@@ -16,27 +16,29 @@ stan.on('connect', () => {
     process.exit();
   });
 
-  const options = stan
-    .subscriptionOptions()
-    .setManualAckMode(true)
-    .setDeliverAllAvailable()
-    .setDurableName('listener-svc');
-  const subscription = stan.subscribe(
-    'ticket:created', 
-    'listener-queue-group',
-    options
-  );
+  // const options = stan
+  //   .subscriptionOptions()
+  //   .setManualAckMode(true)
+  //   .setDeliverAllAvailable()
+  //   .setDurableName('listener-svc');
+  // const subscription = stan.subscribe(
+  //   'ticket:created', 
+  //   'listener-queue-group',
+  //   options
+  // );
 
-  subscription.on('message', (msg: Message) => {
-    console.log('Message received');
+  // subscription.on('message', (msg: Message) => {
+  //   console.log('Message received');
     
-    const data = msg.getData();
-    if (typeof data === 'string') {
-      console.log(`Received event #${msg.getSequence()}, with data: ${data}`);
-    }
+  //   const data = msg.getData();
+  //   if (typeof data === 'string') {
+  //     console.log(`Received event #${msg.getSequence()}, with data: ${data}`);
+  //   }
 
-    msg.ack();
-  });
+  //   msg.ack();
+  // });
+
+  new TicketCreatedListener(stan).listen();
 });
 
 process.on('SIGINT', () => stan.close());
@@ -64,6 +66,7 @@ abstract class Listener {
   }
 
   listen() {
+    
     const subscription = this.client.subscribe(
       this.subject,
       this.queueGroupName,
@@ -85,5 +88,16 @@ abstract class Listener {
     return typeof data === 'string'
       ? JSON.parse(data)
       : JSON.parse(data.toString('utf-8'))
+  }
+}
+
+class TicketCreatedListener extends Listener {
+  subject = 'ticket:created';
+  queueGroupName = 'payments-service';
+
+  onMessage(data: any, msg: Message) {
+    console.log('Event data!', data);
+
+    msg.ack();
   }
 }
